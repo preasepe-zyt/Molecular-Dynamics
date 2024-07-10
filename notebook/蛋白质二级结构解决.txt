@@ -1,0 +1,29 @@
+Solution 1:
+1- First, install libcifpp module using the following commands:
+git clone https://github.com/PDB-REDO/libcifpp.git
+cd libcifpp
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+ctest -C Release
+cmake --install .
+2- Then, install the latest version of DSSP using the following commands:
+git clone https://github.com/PDB-REDO/dssp.git
+cd dssp
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+ctest -C Release
+cmake --install .
+3- You can use the following command to change the DSSP name if it was installed as mkdssp:
+sudo ln -s /usr/bin/mkdssp /usr/bin/dssp
+Solution 2:
+sudo apt-get update
+sudo apt-get install dssp
+sudo ln -s /usr/bin/mkdssp /usr/local/bin/dssp
+gmx do_dssp -ver 4 -s md.tpr -f md.trr -o ss.xpm -sc scount.xvg
+Don't forget to add [-ver 4] flag while you run gmx do_dssp :)
+Please check the following URL, too to see the practical method in generating SS by Gromacs:
+https://gromacs.bioexcel.eu/t/dssp-not-running/3042/9

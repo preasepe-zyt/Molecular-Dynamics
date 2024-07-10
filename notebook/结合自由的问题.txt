@@ -1,0 +1,7 @@
+conda install pymol-open-source
+
+python -m pip install gmx_MMPBSA
+
+python -m pip install pyqt6
+
+sudo apt-get install libxcb-cursor0

@@ -1,0 +1,38 @@
+nvidia-smi
+nvcc --version
+gcc --version
+g++ --version
+tar xfz gromacs-2023.tar.gz
+cd gromacs-2023
+mkdir build
+cd build
+
+apt-get updat
+apt-get install cmake
+tar xfz cmake-3.20.0.tar.gz
+
+export cmake=/root/autodl-tmp/cmake-3.20.0/Auxiliary/bash-completion/cmake
+nvcc --version 看cuda位置
+cmake .. -DGMX_BUILD_OWN_FFTW=ON -DREGRESSIONTEST_DOWNLOAD=ON -DGMX_GPU=CUDA -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda
+
+make
+make check
+sudo make install
+source /usr/local/gromacs/bin/GMXRC
+
+gmx -version
+
+source /usr/local/gromacs/bin/GMXRC
+
+
+#gmx_mmpbsa
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+bash miniconda.sh
+source ~/.bashrc
+conda --version
+conda init 
+
+#dssp
+which dssp
+export DSSP=/home/zyfone/miniconda3/envs/gmxMMPBSA/bin/dssp
+

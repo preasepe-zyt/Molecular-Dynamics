@@ -1,0 +1,50 @@
+source /usr/local/gromacs/bin/GMXRC
+echo 6 | gmx pdb2gmx -f SC6A6.pdb -o preprocessed.gro -water tip3p -ignh
+cp preprocessed.gro complex.gro
+
+最后一行加入PNPC_GMX.gro，顺便改最上面的数字
+将complex.gro文件中第二行的数字增加57
+在力场后面
+第二步修改top
+; Include ligand topology
+#include "sitosterol_GMX.itp" 
+molecules后面加个 itp
+PNPC  
+
+gmx editconf -f complex.gro -o newbox.gro -bt cubic -d 1.0
+
+gmx solvate -cp newbox.gro -cs spc216.gro -p topol.top -o solv.gro
+
+如果出现平衡电荷数警告，在命令后端加上 -maxwarn 1
+gmx grompp -f config/em.mdp -c solv.gro -p topol.top -o next.tpr -maxwarn 1
+
+echo 15 | gmx genion -s next.tpr -o solv_ions.gro -p topol.top -pname NA -nname CL -neutral
+
+gmx grompp -f config/em.mdp -c solv_ions.gro -p topol.top -o em.tpr -maxwarn 1
+
+gmx mdrun -v -deffnm em -nb gpu -ntmpi 1
+
+echo 2 | gmx genrestr -f  ligand_GMX.gro -o posre_PNPC_GMX.itp -fc 1000 1000 1000
+
+在topol.top文件中添加如下几行
+在ligand的top后面
+; Ligand position restraints
+#ifdef POSRES
+#include "posre_PNPC_GMX.itp"
+#endif
+
+gmx make_ndx -f em.gro -o index.ndx
+1 | 13
+q
+
+gmx grompp -f config/nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -n index.ndx -maxwarn 1
+
+gmx mdrun -deffnm nvt -ntmpi 1
+
+gmx grompp -f config/npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -n index.ndx -maxwarn 1
+
+gmx mdrun -deffnm npt -ntmpi 1 -v
+
+gmx grompp -f config/md.mdp -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr -maxwarn 1
+
+gmx mdrun -deffnm md_0_1 -v -nb gpu  -pme gpu -bonded gpu

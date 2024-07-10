@@ -1,0 +1,20 @@
+水盒子用vmd
+file new molecular
+gro 、xtc load
+右键 load data into molecular
+graphics colors display white
+display rendermode glsl
+graphics representation creat 3个 
+1  selection no water
+2 selection protein
+3 selection water 
+grawing method proetin-ligand 不同颜色（colorid ） dynamicbonds 
+drawing methods water colorid-10 material=aochalky drawing method=MSMS
+note probe radius =6.5 （下面的不要点）
+graphics materials aochalky（）
+
+mouse move light=0
+渲染
+file snapsjot openfl Window
+File->Render>Tachyon (interal, in-memory rendering)
+display axes off

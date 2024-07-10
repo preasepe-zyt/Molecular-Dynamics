@@ -1,0 +1,6 @@
+gmx trjconv -s ../md_0_1.tpr -f ../md_0_1.xtc -o traj_noPBC.xtc -pbc cluster -n ../index.ndx
+1
+1
+gmx rms -s  ../md_0_1.tpr -f  traj_noPBC.xtc -o rmsd.xvg -fit rot+trans -xvg none
+
+有时候 1 13

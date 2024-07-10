@@ -1,0 +1,271 @@
+source /usr/local/gromacs/bin/GMXRC
+注释
+acpype.py -i PNPC.mol2 -n 0
+有时候top的moleculars会有问题
+蛋白可以做突变和热点
+
+
+注释#记得去取ligand
+不匹配的问题往往是top和gro不一致
+gmx pdb2gmx -f IL6qu.pdb -o preprocessed.gro -water spc -ignh
+gmx pdb2gmx -f alox5.pdb -o preprocessed.gro -water tip3p -ignh
+gmx pdb2gmx -f alox5.pdb -ff charmm36-mar2019 -water tip3p -ignh -o conf.pdb -nochargegrp
+# 6
+
+
+#pdb
+antechamber -i ./24.pdb -fi pdb -o PNPC.mol2 -fo mol2 -c bcc -nc 0 -rn PNP -at gaff2
+#mol2
+obabel -ipdb ./24.pdb  -omol2 -O acid.mol2
+obabel -imol2 ./24lig.mol2 -opdb -O acid.pdb
+antechamber -i ./acid.mol2 -fi mol2 -o PNPC.mol2 -fo mol2 -c bcc -nc 0 -rn PNP -at gaff
+
+注：
+-at gaff2：指定使用GAFF2力场；
+-c bcc：使用AM1-BCC2方法计算原子电荷；
+-nc 0：指的是分子的净电荷为0；
+-rn PNP：指定小分子的残基名为“PNP”；
+-fo mol2：输出的mol2文件中保留原子类型以及原子电荷。
+
+acpype -i PNPC.mol2
+acpype -i PNPC.mol2 -n -0
+acpype -i PNPC.mol2 -n -1 -c user
+#“PNPC_GMX.itp”与“PNPC_GMX.gro
+把文件放到外面来
+mv /home/zyfone/hard-disk/bai/ligand/PNPC.acpype/PNPC_GMX.itp  /home/zyfone/hard-disk/bai
+mv /home/zyfone/hard-disk/bai/ligand/PNPC.acpype/PNPC_GMX.gro  /home/zyfone/hard-disk/bai
+
+cp preprocessed.gro complex.gro
+cp CBHI_processed.gro complex.gro
+
+ 最后一行加入PNPC_GMX.gro，顺便改最上面的数字
+将complex.gro文件中第二行的数字增加57
+在力场后面
+第二步修改top
+; Include ligand topology
+#include "sitosterol_GMX.itp" 
+molecules后面加个 itp
+PNPC  
+
+gmx editconf -f complex.gro -o newbox.gro -bt cubic -d 1.0
+
+gmx solvate -cp newbox.gro -cs spc216.gro -p topol.top -o solv.gro
+
+如果出现平衡电荷数警告，在命令后端加上 -maxwarn 1
+gmx grompp -f config/em.mdp -c solv.gro -p topol.top -o next.tpr -maxwarn 1
+
+由于生命体系中不存在净电荷，必须在体系中添加离子。
+
+-pname 阳离子的名称 -nname 阴离子的名称 -np 阳离子个数 -nn 阴离子个数
+gmx genion -s next.tpr -o solv_ions.gro -p topol.top -pname NA -np 19 
+gmx genion -s next.tpr -o solv_ions.gro -p topol.top -pname NA -nname CL -neutral
+运行上面的命令后会提示选择溶剂，选择15 SOL。
+
+gmx grompp -f config/em.mdp -c solv_ions.gro -p topol.top -o em.tpr -maxwarn 1
+
+#能量最小化
+ gmx mdrun -v -deffnm em -nb gpu -ntmpi 1
+#gmx energy模块来分析能量最小化的结果
+gmx energy -f em.edr -o potential.xvg
+#提示时, 输入10 0来选择势能Potential(10), 并用零(0)来结束输入
+#图形化查看能量最小化的势能变化
+xmgrace potential.xvg
+
+gmx genrestr -f sitosterol_GMX.gro -o posre_PNPC_GMX.itp -fc 1000 1000 1000
+2
+在topol.top文件中添加如下几行
+在ligand的top后面
+; Ligand position restraints
+#ifdef POSRES
+#include "posre_PNPC_GMX.itp"
+#endif
+
+gmx make_ndx -f em.gro -o index.ndx
+通过下面的命令合并"Protein"和"PNP"，其中">"是make_ndx的提示符：
+
+1 | 13
+q
+
+# Non-Protein 遇到无法识别的情况
+gmx grompp -f config/nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -n index.ndx -maxwarn 1
+
+#nvt温度平衡
+gmx mdrun -deffnm nvt -ntmpi 1
+
+gmx mdrun -s nvt.tpr -cpi nvt.cpt -deffnm nvt -ntmpi 1
+#平衡结果分析
+gmx energy -f nvt.edr -o temperature.xvg
+#在提示符下键入“15 0”，选择温度代号15，选择0退出
+#图形化查看温度平衡情况
+xmgrace temperature.xvg
+
+# Non-Protein 遇到无法识别的情况
+gmx grompp -f config/npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -n index.ndx -maxwarn 1
+
+#压力平衡
+gmx mdrun -deffnm npt -ntmpi 1 -v
+gmx mdrun -s npt.tpr -cpi npt.cpt -deffnm npt -ntmpi 1
+#压力分析
+gmx energy -f npt.edr -o pressure.xvg
+#根据提示输入17 0 获得压力的数据结果
+#图形化查看压力变化
+xmgrace pressure.xvg
+#密度分析：
+gmx energy -f npt.edr -o density.xvg
+#根据提示 输入 23 0 获得结果
+#图形化查看
+xmgrace density.xvg
+#正式模拟
+gmx grompp -f config/md.mdp -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr -maxwarn 1
+
+显示时间
+gmx mdrun -deffnm md_0_1 -v -nb gpu  -pme gpu -bonded gpu
+gmx mdrun -deffnm md_0_1 -nb gpu -v 
+gmx mdrun -deffnm md_0_1 -v -ntomp 1
+②如果模拟过程中因突发状况导致模拟终止，可使用如下命令续跑。
+
+在同一个文件夹下运行（假设你的任务名称是 md_0_1）
+
+gmx mdrun -s md_0_1.tpr -cpi md_0_1.cpt -deffnm md_0_1 -v -nb gpu  -pme gpu -bonded gpu
+
+#gpu加速
+①如果要使用gpu加速，可在末尾加上 -nb gpu 来使用gpu加速计算，-v 可显示计算结束时间。
+gmx mdrun -deffnm md_0_1 -nb gpu -v
+
+#rerun
+gmx mdrun -rerun md_0_1.trr -s md_0_1.tpr -o rerun.trr -c rerun.gro
+
+#提取xtc文件
+gmx  trjconv -f rerun.trr -o  mdreturn.xtc
+
+#周期性矫正能量组
+gmx trjconv -s md_0_1.tpr -f mdreturn.xtc -center -ur compact -pbc mol  -o md_return.xtc
+
+#进行轨迹的周期性矫正
+gmx trjconv -s md_0_1.tpr -f md_0_1.xtc -ur rect -pbc mol -center -o md_center.xtc
+#Center (-center) on the Protein and remap all the molecules (-pbc mol) of the whole System:
+
+#为了提取轨迹的第一帧(t = 0ns)，对重定位的轨迹使用trjconv -dump：
+gmx trjconv -s md_0_1.tpr -f md_center.xtc -o start.pdb -dump 0
+
+gmx trjconv -s md_0_1.tpr -f md_center.xtc -fit rot+trans -o md_fit.xtc
+#RMS-fit (-fit rot+trans) to the protein backbone atoms in the initial frame (supplied in the TPR file) and write out the whole System:
+
+#提取部分
+gmx trjconv -f md_0_1.xtc -o trj_30to50ns.xtc -b 30000 -e 50000
+
+#analysis
+mkdir RMSD && cd RMSD
+gmx make_ndx -f ../md_0_1.tpr -o CA.ndx
+
+#计算rmsd
+#1nm=10A
+gmx rms -s  ../md_0_1.tpr -f  ../md_0_1.xtc -o rmsd.xvg -fit rot+trans -xvg none
+gmx rms -s  ../md_0_1.tpr -f  trj_30to50ns -o rmsd.xvg -fit rot+trans -xvg none
+#滑动平均
+gmx rms -s ../md_0_1.gro -f ../md_0_1.xtc -o rmsd_m.xvg -av windowsize
+Choose 4 ("Backbone") for both the least-squares fit and the group for RMSD calculation
+
+#rmsf
+gmx rmsf -s ../md_0_1.tpr -f ../md_0_1.xtc  -o rmsf.xvg -fit -xvg none
+#1 (Protein)
+
+#distance
+gmx distance -s ../md_0_1.tpr -f ../md_0_1.xtc -select 'com of group 1 plus com of group 13' -oav distave.xvg -oall dist.xvg -dt 10 -xvg none
+
+#Radius of gyration
+gmx gyrate -s ../md_0_1.tpr -f ../md_0_1.xtc -o gyrate.xvg -xvg none
+选择1 Protein并回车.
+
+#hbond 
+gmx hbond  -s ../md_0_1.tpr -f ../md_0_1.xtc -n ../index.ndx -num hbond_num.xvg  -xvg none
+gmx hbond -f ../md_0_1.xtc -s ../md_0_1.tpr -n ../index.ndx -num -hbn -hbm -xvg none
+提示时, 根据需要选择要分析的组. 一般选择(Protein)和(Water).
+你可以使用-r和-a选项设定其它阈值. 默认地, g_hbond计算施体受体距离 rDA
+, 可以用-da no选项设置为计算 rHA
+ 距离.
+
+#二级结构
+gmx do_dssp -f ../md_0_1.xtc -s ../md_0_1.tpr -n ../index.ndx -tu ns -o ss.xpm -sc scount.xvg  -xvg none
+mpirun -np 30 gmx do_dssp -s  ../md_0_1.tpr -f  traj_noPBC.xtc -o ss.xpm -sc scount.xvg  -xvg none
+选group 1 蛋白组
+
+‐o ss.xpm 包含各个残基每一帧的二级结构信息
+
+‐sc scount.xvg 统计某二级结构的残基数目
+gmx xpm2ps -f ss.xpm -di xpm2ps.m2p -by 10 -bx 4 -o ss.eps -rainbow no
+gmx xpm2ps -f ss.xpm -o ss.eps
+-di 指定一个.m2p文件，对输出图片的格式进行参数设置。
+
+-bx 元素的x大小，当X轴过长可设为2
+
+-by 元素的y大小
+然后再使用ImageMagick程序的convert命令将eps文件转换为png图片格式或其他图片格式(也可使用Gimp程序或Windows下的IrfanView程序).
+convert ss.eps ss.png
+
+# g_sas计算溶剂可及表面积
+氨基酸残基的疏水性是影响蛋白质折叠的重要因素, 溶剂可及表面积(SASA)是描述蛋白质疏水性的重要参数. 可利用g_sas计算蛋白质的溶剂可及表面积:
+
+gmx sasa -s ../md_0_1.tpr -f ../md_0_1.xtc -o area.xvg -or resarea.xvg -oa atomarea.xvg -xvg none
+gmx sasa -s ../md_0_1.tpr -f ../md_0_1.xtc -o area.xvg -or resarea.xvg -oa atomarea.xvg -xvg none
+提示时选择1 (Protein)并回车
+
+#主成分分析
+gmx covar -s ../md_0_1.gro -f ../mdreturn.xtc -o eigenvalues.xvg -v eigenvectors.trr -xpma covapic.xpm #协方差
+>4
+>4
+gmx xpm2ps -f covapic.xpm -o covara.eps -do covara.m2p
+
+#pca能量图
+特征向量投影
+gmx anaeig -f ../mdreturn.xtc -s ../md_0_1.gro -v eigenvectors.trr -last 1 -proj pc1.xvg
+gmx anaeig -f ../mdreturn.xtc -s ../md0_0_1.gro -v eigenvectors.trr -frist 2 -last 2 -proj pc2.xvg
+paste rmsd.xvg gyrate.xvg> rmsd-rg.xvg
+#脚本合并
+perl sham.pl -i1 rmsd.xvg -i2 gyrate.xvg -data 1 -data2 1 -o rmsd-rg.xvg
+#Gibbs自由能
+gmx sham -f rmsd-rg.xvg -ls FES.xpm
+python2.7 xpm2txt.py -f FES.xpm -o free-energy-landscape.txt
+
+#自由能形貌（free energy landscape，FEL）
+paste rmsd.xvg  gyrate.xvg > rmsd-rg.xvg
+gmx sham -f rmsd-rg.xvg -nlevels 100 -ls gibbs.xpm
+md-davis landscape_xvg -T 300 -x rmsd_Rac1-isopimpinellin.xvg -y gyrate_Rac1-isopimpinellin.xvg -n "Rac1-isopimpinellin" -l "Rac1-isopimpinellin"  -o 2VH7_landscape.html
+
+
+kcal/mol" 表示每摩尔的能量
+分析
+计算自由结合能
+gmx make_ndx -f ../complex.gro -o index.ndx
+splitch 1 #此时会生成新的组和编号
+name 1 receptor #ligand_index代表index的编号，下同
+name 13 ligand
+q #save and quit
+
+
+#轨迹有问题
+mpirun -np 3 gmx_MMPBSA -O -i mmpbsa.in -cs ../md_return.tpr -ci index.ndx -cg 1 13 -ct ../mdreturn.xtc > progress.log
+一定要周期性矫正和中心化
+#跑自由的结合能
+mpirun -np 30 gmx_MMPBSA MPI -O -i mmpbsa.in -cs ../md_0_1.tpr -ci  ../index.ndx -cg 1 13 -ct ../md_return.xtc -cp ../topol.top -o FINAL_RESULTS_MMPBSA.dat -eo FINAL_RESULTS_MMPBSA.csv
+
+
+
+#cat > mmpbsa.in
+
+
+Sample input file for GB calculation building the Amber topologies
+from structures. Please refer to the section "How gmx_MMPBSA works"
+
+&general
+startframe=1, endframe=5000, interval=5, verbose=2, 
+forcefields="oldff/leaprc.ff99SB,leaprc.gaff"
+/
+&gb
+igb=5, saltcon=0.150
+/
+&decomp
+idecomp=2, dec_verbose=3,
+print_res="within 4"
+/
+#温度耦合器，压强耦合器，相互作用算法以及截断值，退火过程，一般就这几个会改动吧

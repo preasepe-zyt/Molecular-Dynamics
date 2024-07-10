@@ -1,0 +1,34 @@
+#准备拓扑结构和力场
+gmx pdb2gmx -f IL6qu.pdb -o preprocessed.gro -water tip3p -ignh
+
+#定义单元盒子
+gmx editconf -f preprocessed.gro -o newbox.gro -bt dodecahedron -d 1.0
+
+#盒子里面填充溶剂
+gmx solvate -cp newbox.gro -cs spc216.gro -p topol.top -o solv.gro
+
+#添加离子
+gmx grompp -f config/em.mdp -c solv.gro -p topol.top -o next.tpr -maxwarn 1
+#选择什么离子
+gmx genion -s next.tpr -o solv_ions.gro -p topol.top -pname NA -nname CL -neutral
+
+#能量最小化
+gmx grompp -f config/em.mdp -c solv_ions.gro -p topol.top -o em.tpr -maxwarn 1
+
+gmx mdrun -v -deffnm em -ntmpi 1
+
+#温度平衡
+gmx grompp -f config/nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -maxwarn 1
+
+
+gmx mdrun -deffnm nvt -ntmpi 1
+
+#压力平衡
+gmx grompp -f config/npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -maxwarn 1
+
+gmx mdrun -deffnm npt -ntmpi 1
+
+#成品模拟
+gmx grompp -f config/md.mdp -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr -maxwarn 1
+
+gmx mdrun -deffnm md_0_1 -v -nb gpu  -pme gpu -bonded gpu
