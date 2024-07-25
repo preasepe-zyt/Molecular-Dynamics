@@ -1,0 +1,73 @@
+title       = Umbrella pulling simulation 
+define      = -DPOSRES_B
+; Run parameters
+integrator  = md
+dt          = 0.002
+tinit       = 0
+nsteps      = 250000    ; 500 ps
+nstcomm     = 10
+; Output parameters
+nstxout     = 5000      ; every 10 ps
+nstvout     = 5000 
+nstfout     = 500
+nstxtcout   = 500       ; every 1 ps
+nstenergy   = 500
+; Bond parameters
+constraint_algorithm    = lincs
+constraints             = all-bonds
+continuation            = yes       ; continuing from NPT 
+; Single-range cutoff scheme
+cutoff-scheme   = Verlet
+nstlist         = 20 
+ns_type         = grid 
+rlist           = 1.4
+rcoulomb        = 1.4
+rvdw            = 1.4
+; PME electrostatics parameters
+coulombtype     = PME
+fourierspacing  = 0.12
+fourier_nx      = 0
+fourier_ny      = 0
+fourier_nz      = 0
+pme_order       = 4
+ewald_rtol      = 1e-5
+optimize_fft    = yes
+; Berendsen temperature coupling is on in two groups
+Tcoupl      = Nose-Hoover
+tc_grps     = Protein   Non-Protein 
+tau_t       = 1.0       1.0
+ref_t       = 310       310
+; Pressure coupling is on
+Pcoupl          = no
+; Generate velocities is off
+gen_vel     = no 
+; Periodic boundary conditions are on in all directions
+pbc     = xyz
+; Long-range dispersion correction
+DispCorr    = EnerPres
+; Pull code
+pull                    = yes       ; 开启牵引
+pull_ncoords            = 1         ; 设置有几个拉伸反应过程
+pull_ngroups            = 2         ; 在一个拉伸过程涉及两个拉伸组
+pull_group1_name        = mol       ; 第一个拉伸组的名称叫做JZ4，对应index文件的配体组名
+pull_group2_name        = Protein   ; 第二个拉伸组的名称叫做Protein, 对应index文件的蛋白组名
+pull_coord1_type        = umbrella  ; 使用简谐力牵引（类似于弹簧）
+pull_coord1_geometry    = direction-periodic ; 牵引模式，有以下四种类型
+                                              ; distance:沿质心间的矢量, 用pull-dim选择分量
+                                              ; direction:沿pull-vec方向
+                                              ; direction-periodic:同direction, 距离可超过盒长一半. 使用时关闭压力耦合
+                                              ; cylinder:圆柱
+pull_coord1_dim         = N N Y     ; 沿着Z轴方向牵引，和distance牵引模式搭配使用
+pull-coord1-vec         = 0 0 1     ; 沿着（0，0，1）矢量方向牵引，和direction、direction-periodic两种牵引模式搭配使用
+pull_coord1_groups      = 1 2       ; groups1 对应上面的JZ4， groups2对应Protein
+pull_coord1_start       = yes       ; 定义初始质心距离大于0
+pull_coord1_rate        = 0.05      ; 牵引速度0.05nm/ps
+pull_coord1_k           = 250      ; 牵引力常数，单位（kJ mol^-1 nm^-2）
+
+pull-pbc-ref-prev-step-com = yes 
+pull_group2_pbcatom = 123
+
+
+
+
+
