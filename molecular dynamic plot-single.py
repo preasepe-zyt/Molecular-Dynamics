@@ -4,14 +4,13 @@ import numpy
 import sys
 sys.path.append(r"C:\Users\79403\Desktop\Cal-MD-240623\PTGS2_calendoflaside")
 from mean import mean
-import matplotlib.pyplot as plt
 import os
 from str_split import str_split
 import pandas as pd
 import seaborn as sns
 
 # 使用seaborn的颜色循环
-colors = sns.color_palette('pastel', len(data.columns))
+#colors = sns.color_palette('pastel', len(data.columns))
 
 #matplotlib.use("TKAgg")
 #字体
@@ -311,3 +310,47 @@ ax.set_yticks(numpy.arange(-100, 110, 10))
 # plt.tight_layout()
 plt.show()
 fig.savefig(path+"\\"+"totalMMPBSA.png", dpi=300)
+
+#smd
+list = os.listdir(path)
+pull_name = [i for i in list if "pull" in i]
+pull_legend = [str_split(i,"_",".") for i in pull_name]
+fig = plt.figure(figsize=(9, 9))
+ax = fig.add_subplot(111)
+fig.subplots_adjust(bottom=0.2)
+for index, i in enumerate(pull_name):
+    t, f = numpy.loadtxt(path + "\\" + i, unpack=True,comments=["#","@"])
+    ax.plot(t, f, linestyle="-", color=colors[index], label=pull_legend[index],linewidth=1.5) #
+ax.set_xlabel("Time (ps)", fontsize=20)
+ax.set_ylabel(r"Force (kJ/mol/nm)", fontsize=20) #r"C$_\alpha$ RMSD (nm)"
+ax.legend(loc='upper right', frameon=False, fontsize=13)
+# 设置坐标轴刻度的大小
+ax.tick_params(axis='both', labelsize=20)
+# 设置坐标轴边框粗细
+for spine in ax.spines.values():
+    spine.set_linewidth(2)
+#ax.set_yticks(numpy.arange(0, 0.5, 0.1))
+plt.show()
+fig.savefig(path+"\\"+"pull.png", dpi=300)
+
+#umbrella
+list = os.listdir(path)
+um_name = [i for i in list if "hist" in i]
+um_legend = [str_split(i,"_",".") for i in um_name]
+fig = plt.figure(figsize=(9, 9))
+ax = fig.add_subplot(111)
+fig.subplots_adjust(bottom=0.2)
+for index, i in enumerate(um_name):
+    a,  b= numpy.loadtxt(path + "\\" + i, unpack=True,comments=["#","@"])
+    ax.plot(a, b, linestyle="-", color=colors[index], label=um_legend[index]) #
+ax.set_xlabel("ξ", fontsize=20)
+ax.set_ylabel(r"Energy (kcal mol$^{-1}$)", fontsize=20) #r"C$_\alpha$ RMSD (nm)"
+ax.legend(loc='upper right', frameon=False, fontsize=13)
+# 设置坐标轴刻度的大小
+ax.tick_params(axis='both', labelsize=20)
+# 设置坐标轴边框粗细
+for spine in ax.spines.values():
+    spine.set_linewidth(2)
+#ax.set_yticks(numpy.arange(0, 0.5, 0.1))
+plt.show()
+fig.savefig(path+"\\"+"pull.png", dpi=300)
