@@ -12,4 +12,4 @@
 <h1>伞状采样<br>
 <h4>https://blog.csdn.net/monkeny/article/details/127760751<br>
 <h1>conda PLUMED 安装<br>
-<h4>conda install --strict-channel-priority -c plumed/label/masterclass-mpi -c conda-forge plumed=2.9.1<br>
+<h4>conda install  -c conda-forge plumed=2.9.1<br>
