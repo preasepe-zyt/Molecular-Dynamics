@@ -13,8 +13,14 @@ tar xfz cmake-3.20.0.tar.gz
 
 export cmake=/root/autodl-tmp/cmake-3.20.0/Auxiliary/bash-completion/cmake
 nvcc --version 看cuda位置
-cmake .. -DGMX_BUILD_OWN_FFTW=ON -DREGRESSIONTEST_DOWNLOAD=ON -DGMX_GPU=CUDA -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda
 
+#plumed
+cd gromacs后
+plumed patch -p
+cmake  ..  -DGMX_DOUBLE=off  -DGMX_OPENMP=ON-DGMX_BUILD_OWN_FFTW=ON -DREGRESSIONTEST_DOWNLOAD=ON -DGMX_GPU=CUDA -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8 -DCMAKE_BUILD_RPATH=/usr/local/cuda-11.8/targets/x86_64-linux/lib
+
+
+cmake  ..  -DGMX_DOUBLE=off  -DGMX_OPENMP=ON-DGMX_BUILD_OWN_FFTW=ON -DREGRESSIONTEST_DOWNLOAD=ON -DGMX_GPU=CUDA -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda
 make
 make check
 sudo make install
